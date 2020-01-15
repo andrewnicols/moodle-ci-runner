@@ -143,6 +143,7 @@ export DBPASS="${DBPASS:-moodle}"
 export DBHOST="${DBHOST:-${DBTYPE}}"
 export DBNAME="moodle"
 
+echo "COMPOSER_AUTH" >> "${ENVIROPATH}"
 echo "DBTYPE" >> "${ENVIROPATH}"
 echo "DBHOST" >> "${ENVIROPATH}"
 echo "DBUSER" >> "${ENVIROPATH}"
