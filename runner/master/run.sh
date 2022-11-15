@@ -36,6 +36,7 @@ export PLUGINSDIR="${PLUGINSDIR:-${WORKSPACE}/plugins}"
 # Select image versions for Firefox and Chrome
 SELVERSION="${SELVERSION:-4}"
 SELCHROMEIMAGE="${SELIMAGE:-selenium/standalone-chrome:${SELVERSION}}"
+SELEDGEIMAGE="${SELIMAGE:-selenium/standalone-edge:${SELVERSION}}"
 SELFIREFOXIMAGE="${SELIMAGE:-selenium/standalone-firefox:${SELVERSION}}"
 
 mkdir -p "${PLUGINSDIR}"
@@ -264,6 +265,7 @@ echo "== TESTSUITE: ${TESTSUITE}"
 echo "== Environment: ${ENVIROPATH}"
 echo "== Selenium version: ${SELVERSION}"
 echo "== Chrome image: ${SELCHROMEIMAGE}"
+echo "== Edge image: ${SELEDGEIMAGE}"
 echo "== Firefox image: ${SELFIREFOXIMAGE}"
 echo "============================================================================"
 
@@ -677,20 +679,12 @@ then
   echo "============================================================================"
 
   SHMMAP="--shm-size=2g"
-
   HASSELENIUM=1
-
-  # Newer versions of Firefox do not allow Marionette to be disabled.
-  # Version 47.0.1 is the latest version of Firefox we can support when Marionette is disabled.
-  if [[ ${DISABLE_MARIONETTE} -ge 1 ]]
-  then
-      SELFIREFOXIMAGE="moodlehq/moodle-standalone-firefox:3.141.59_47.0.1"
-  fi
-
+  SELIMAGE=""
 
   if [ "$BROWSER" == "chrome" ]
   then
-
+    SELIMAGE="${SELCHROMEIMAGE}"
     if [ ! -z "$MOBILE_VERSION" ]
     then
       # Only run the moodlemobile docker container when the MOBILE_VERSION is defined.
@@ -707,43 +701,20 @@ then
       echo "IONICURL" >> "${ENVIROPATH}"
     fi
 
-    ITER=1
-    while [[ ${ITER} -le ${BEHAT_TOTAL_RUNS} ]]
-    do
-      SELITERNAME=selenium"${ITER}${UUID}"
-      docker run \
-        --network "${NETWORK}" \
-        --name ${SELITERNAME} \
-        --detach \
-        $SHMMAP \
-        -v "${CODEDIR}":/var/www/html \
-        ${SELCHROMEIMAGE}
+  elif [ "$BROWSER" == "edge" ]
+  then
+    SELIMAGE="${SELEDGEIMAGE}"
 
-      export "SELENIUMURL_${ITER}"="http://${SELITERNAME}:4444"
-      echo "SELENIUMURL_${ITER}" >> "${ENVIROPATH}"
-
-      ITER=$(($ITER+1))
-    done
   elif [ "$BROWSER" == "firefox" ]
   then
+    # Newer versions of Firefox do not allow Marionette to be disabled.
+    # Version 47.0.1 is the latest version of Firefox we can support when Marionette is disabled.
+    if [[ ${DISABLE_MARIONETTE} -ge 1 ]]
+    then
+        SELFIREFOXIMAGE="moodlehq/moodle-standalone-firefox:3.141.59_47.0.1"
+    fi
+    SELIMAGE="${SELFIREFOXIMAGE}"
 
-    ITER=1
-    while [[ ${ITER} -le ${BEHAT_TOTAL_RUNS} ]]
-    do
-      SELITERNAME=selenium"${ITER}${UUID}"
-      docker run \
-        --network "${NETWORK}" \
-        --name ${SELITERNAME} \
-        --detach \
-        $SHMMAP \
-        -v "${CODEDIR}":/var/www/html \
-        ${SELFIREFOXIMAGE}
-
-      export "SELENIUMURL_${ITER}"="http://${SELITERNAME}:4444"
-      echo "SELENIUMURL_${ITER}" >> "${ENVIROPATH}"
-
-      ITER=$(($ITER+1))
-    done
   elif [ "$BROWSER" == "goutte" ]
   then
       export BROWSER=""
@@ -753,14 +724,32 @@ then
 
   if [ "${HASSELENIUM}" -gt 0 ]
   then
-      sleep 5
+    ITER=1
+    while [[ ${ITER} -le ${BEHAT_TOTAL_RUNS} ]]
+    do
+      SELITERNAME=selenium"${ITER}${UUID}"
+      docker run \
+        --network "${NETWORK}" \
+        --name ${SELITERNAME} \
+        --detach \
+        $SHMMAP \
+        -v "${CODEDIR}":/var/www/html \
+        ${SELIMAGE}
 
-      ITER=1
-      while [[ ${ITER} -le ${BEHAT_TOTAL_RUNS} ]]
-      do
-        docker logs selenium"${ITER}${UUID}"
-        ITER=$(($ITER+1))
-      done
+      export "SELENIUMURL_${ITER}"="http://${SELITERNAME}:4444"
+      echo "SELENIUMURL_${ITER}" >> "${ENVIROPATH}"
+
+      ITER=$(($ITER+1))
+    done
+
+    sleep 5
+
+    ITER=1
+    while [[ ${ITER} -le ${BEHAT_TOTAL_RUNS} ]]
+    do
+      docker logs selenium"${ITER}${UUID}"
+      ITER=$(($ITER+1))
+    done
   fi
 
   echo "============================================================================"
