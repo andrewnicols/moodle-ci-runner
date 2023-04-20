@@ -173,6 +173,11 @@ mkdir -p "${OUTPUTDIR}"
 rm -f "${ENVIROPATH}"
 touch "${ENVIROPATH}"
 
+# Clean all certificates between runs.
+CERTIFICATEROOT="${OUTPUTDIR}/certificates"
+rm -rf "${CERTIFICATEROOT}"
+mkdir -p "${CERTIFICATEROOT}"
+
 if [ ! -z "$BEHAT_TIMING_FILENAME" ]
 then
   mkdir -p "${WORKSPACE}/timing"
@@ -578,11 +583,21 @@ docker logs ${BBBMOCK}
 if [ "${TESTTORUN}" == "phpunit" ]
 then
   EXTTESTNAME=exttests"${UUID}"
+  "${SCRIPTPATH}/certs/create.sh" "${OUTPUTDIR}" "${EXTTESTNAME}" > ${OUTPUTDIR}/certificates/exttests.log 2>&1
+
+  EXTTESTSCERTS="${OUTPUTDIR}/exttests/certs"
+  mkdir -p "${EXTTESTSCERTS}"
+  cp "${CERTIFICATEROOT}/certs/${EXTTESTNAME}.crt" "${EXTTESTSCERTS}"/server.crt
+  cp "${CERTIFICATEROOT}/certs/${EXTTESTNAME}.key" "${EXTTESTSCERTS}"/server.key
+  cp "${CERTIFICATEROOT}/ca/ca.pem" "${EXTTESTSCERTS}"/ca.crt
 
   docker run \
     --detach \
     --name ${EXTTESTNAME} \
     --network "${NETWORK}" \
+    -v "${EXTTESTSCERTS}":/etc/ssl/certs/moodle \
+    -v "${SCRIPTPATH}/certs/apache2/docker-entrypoint.d:/docker-entrypoint.d" \
+    -v "${SCRIPTPATH}/certs/apache2/443-default.conf:/etc/apache2/conf-enabled/443-default.conf" \
     moodlehq/moodle-exttests:latest
 
   export EXTTESTURL="http://${EXTTESTNAME}"
@@ -800,6 +815,10 @@ docker run \
   -v "${COMPOSERCACHE}:/var/www/.composer:rw" \
   -v "${OUTPUTDIR}":/shared \
   ${PHP_SERVER_DOCKER}
+
+# Add the CA certificate to the web server.
+docker exec "${WEBSERVER}" cp /shared/certificates/ca/ca.pem /usr/local/share/ca-certificates/moodle-ci-runner.crt
+docker exec "${WEBSERVER}" update-ca-certificates
 
 # Copy code in place.
 echo "== Copying code in place"
