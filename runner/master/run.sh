@@ -603,22 +603,22 @@ docker logs ${BBBMOCK}
 if [ "${TESTTORUN}" == "phpunit" ]
 then
   EXTTESTNAME=exttests"${UUID}"
-  "${SCRIPTPATH}/certs/create.sh" "${OUTPUTDIR}" "${EXTTESTNAME}" > ${OUTPUTDIR}/certificates/exttests.log 2>&1
+  # "${SCRIPTPATH}/certs/create.sh" "${OUTPUTDIR}" "${EXTTESTNAME}" > ${OUTPUTDIR}/certificates/exttests.log 2>&1
 
-  EXTTESTSCERTS="${OUTPUTDIR}/exttests/certs"
-  mkdir -p "${EXTTESTSCERTS}"
-  cp "${CERTIFICATEROOT}/certs/${EXTTESTNAME}.crt" "${EXTTESTSCERTS}"/server.crt
-  cp "${CERTIFICATEROOT}/certs/${EXTTESTNAME}.key" "${EXTTESTSCERTS}"/server.key
-  cp "${CERTIFICATEROOT}/ca/ca.pem" "${EXTTESTSCERTS}"/ca.crt
+  # EXTTESTSCERTS="${OUTPUTDIR}/exttests/certs"
+  # mkdir -p "${EXTTESTSCERTS}"
+  # cp "${CERTIFICATEROOT}/certs/${EXTTESTNAME}.crt" "${EXTTESTSCERTS}"/server.crt
+  # cp "${CERTIFICATEROOT}/certs/${EXTTESTNAME}.key" "${EXTTESTSCERTS}"/server.key
+  # cp "${CERTIFICATEROOT}/ca/ca.pem" "${EXTTESTSCERTS}"/ca.crt
 
   docker run \
     --detach \
     --name ${EXTTESTNAME} \
     --network "${NETWORK}" \
-    -v "${EXTTESTSCERTS}":/etc/ssl/certs/moodle \
-    -v "${SCRIPTPATH}/certs/apache2/docker-entrypoint.d:/docker-entrypoint.d" \
-    -v "${SCRIPTPATH}/certs/apache2/443-default.conf:/etc/apache2/conf-enabled/443-default.conf" \
     moodlehq/moodle-exttests:latest
+    # -v "${EXTTESTSCERTS}":/etc/ssl/certs/moodle \
+    # -v "${SCRIPTPATH}/certs/apache2/docker-entrypoint.d:/docker-entrypoint.d" \
+    # -v "${SCRIPTPATH}/certs/apache2/443-default.conf:/etc/apache2/conf-enabled/443-default.conf" \
 
   export EXTTESTURL="http://${EXTTESTNAME}"
   echo EXTTESTURL >> "${ENVIROPATH}"
