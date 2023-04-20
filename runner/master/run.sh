@@ -569,6 +569,26 @@ echo ">>> stopsection <<<"
 echo
 echo ">>> startsection Starting supplemental services <<<"
 echo "============================================================================"
+MOODLENETMOCK=moodlenetmock"${UUID}"
+
+# Generate the MoodleNet mock certificates.
+"${SCRIPTPATH}/certs/create.sh" "${OUTPUTDIR}" "${MOODLENETMOCK}" > ${OUTPUTDIR}/certificates/moodlenet_mock.log 2>&1
+MOODLENETMOCKCERTS="${OUTPUTDIR}/moodlenet/certs"
+mkdir -p "${MOODLENETMOCKCERTS}"
+cp "${CERTIFICATEROOT}/certs/${MOODLENETMOCK}.p12" "${MOODLENETMOCKCERTS}"/moodlenet.p12
+cp "${CERTIFICATEROOT}/ca/ca.pem" "${MOODLENETMOCKCERTS}"/ca.crt
+
+docker run \
+  --detach \
+  --name ${MOODLENETMOCK} \
+  --network "${NETWORK}" \
+  -v "${MOODLENETMOCKCERTS}":/opt/ssl/certs \
+  moodlehq/moodlenet_mock:latest
+
+export MOODLENETMOCKURL="https://${MOODLENETMOCK}"
+echo MOODLENETMOCKURL >> "${ENVIROPATH}"
+docker logs ${MOODLENETMOCK}
+
 BBBMOCK=bbbmock"${UUID}"
 docker run \
   --detach \
@@ -839,6 +859,8 @@ then
   docker cp "${COMPOSERPHAR}" "${WEBSERVER}":/var/www/html/composer.phar
   docker exec -t "${WEBSERVER}" bash -c 'chown -R www-data:www-data /var/www/html/composer.phar'
 fi
+
+read -p "Press enter to continue"
 
 echo "============================================================================"
 docker logs "${WEBSERVER}"

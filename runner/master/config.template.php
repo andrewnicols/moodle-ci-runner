@@ -131,15 +131,19 @@ if (!empty(getenv('EXTTESTURL'))) {
     define('TEST_EXTERNAL_FILES_HTTPS_URL', getenv('EXTTESTURL'));
 }
 
+if (property_exists($CFG, 'behat_wwwroot')) {
+    $mockhash = sha1($CFG->behat_wwwroot);
+} else {
+    $mockhash = sha1($CFG->wwwroot);
+}
 if (!empty(getenv('BBBMOCKURL'))) {
-    if (property_exists($CFG, 'behat_wwwroot')) {
-        $mockhash = sha1($CFG->behat_wwwroot);
-    } else {
-        $mockhash = sha1($CFG->wwwroot);
-    }
-
     $bbbmockurl = getenv('BBBMOCKURL') . "/hash{$mockhash}";
     define("TEST_MOD_BIGBLUEBUTTONBN_MOCK_SERVER", $bbbmockurl);
+}
+
+if (!empty(getenv('MOODLENETMOCKURL'))) {
+    $mockurl = getenv('MOODLENETMOCKURL') . "/hash{$mockhash}";
+    define("TEST_MOODLENET_MOCK_SERVER", $mockurl);
 }
 
 if ($mlbackendpython = getenv('MLBACKENDTESTNAME')) {
